@@ -1,3 +1,15 @@
+-- spectator mode
+g_spectator = {
+    spectator_team = 1,
+    current_team = -1,
+    loaded = 0,
+    enabled = 0,
+}
+
+function is_spectator()
+    return g_spectator.current_team == g_spectator.spectator_team
+end
+
 g_tab_map = {
     tab_title = "",
     render = nil,
@@ -8,7 +20,7 @@ g_tab_map = {
     is_overlay = false,
     highlighted_carrier_id = 0,
     selected_carrier_id = 0,
-    
+
     is_map_pos_initialised = false,
     camera_pos_x = 81438,
     camera_pos_y = 91753,
@@ -46,7 +58,7 @@ g_tab_options = {
 
     selected_panel = 0,
     hovered_panel = 0,
-    ui_container = nil    
+    ui_container = nil
 }
 
 g_tab_multiplayer = {
@@ -62,9 +74,9 @@ g_tab_multiplayer = {
     toast_col = color_status_ok,
     selected_peer_id = 0,
     confirm_ban_peer = false,
-    
+
     screen_index = 0,
-    ui_container = nil    
+    ui_container = nil
 }
 
 g_tab_manual = {
@@ -90,17 +102,33 @@ g_tab_manual = {
     }
 }
 
+g_tab_spectate = {
+    tab_title = "SPECTATE",
+    render = nil,
+    begin = nil,
+    input_event = nil,
+    input_pointer = nil,
+    input_scroll = nil,
+    is_overlay = false,
+
+    ui_container = nil,
+    screen_index = 0,
+    btn_start_spectate = 0,
+}
+
 g_tabs = {
     [0] = g_tab_map,
     [1] = g_tab_manual,
     [2] = g_tab_multiplayer,
     [3] = g_tab_game,
     [4] = g_tab_options,
+    --[5] = g_tab_spectate,
     map = 0,
     manual = 1,
     multiplayer = 2,
     game = 3,
     options = 4,
+    --spectate = 5,
 }
 
 g_screens = {
@@ -115,7 +143,7 @@ g_hovered_tab = -1
 g_input_axis = { x = 0, y = 0, z = 0, w = 0 }
 
 g_text = {
-	["save_name"] = "savename",
+    ["save_name"] = "savename",
 }
 
 g_edit_text = nil
@@ -134,8 +162,7 @@ g_is_mouse_mode = false
 g_animation_time = 0
 g_tut_is_help_tab_selected = false
 
-function begin()
-    begin_load()
+function pause_begin()
     reset()
 
     g_tab_map.render = tab_map_render
@@ -174,13 +201,19 @@ function begin()
     g_tab_manual.input_scroll = tab_manual_input_scroll
     g_tab_manual.tab_title = update_get_loc(e_loc.upp_manual)
     g_tab_manual.ui_container = lib_imgui:create_ui()
+
+    g_tab_spectate.render = tab_spectate_render
+    g_tab_spectate.input_event = tab_spectate_input_event
+    g_tab_spectate.input_pointer = tab_spectate_input_pointer
+    g_tab_spectate.input_scroll = tab_spectate_input_scroll
+    g_tab_spectate.ui_container = lib_imgui:create_ui()
 end
 
 function reset()
     g_tab_map.is_map_pos_initialised = false
 end
 
-function update(screen_w, screen_h, delta_time)
+function pause_update(screen_w, screen_h, delta_time)
     g_tab_map.tab_title = update_get_loc(e_loc.upp_map)
     g_tab_game.tab_title = update_get_loc(e_loc.upp_game)
     g_tab_options.tab_title = update_get_loc(e_loc.upp_options)
@@ -216,7 +249,7 @@ function update(screen_w, screen_h, delta_time)
 
     update_ui_rectangle(0, 0, screen_w, 14, color_black)
     update_ui_line(0, 14, screen_w, 14, iff(is_hoverable, iff(g_focused_screen == g_screens.active_tab, color_white, color_highlight), color_grey_dark))
-    
+
     local cx = 10
 
     g_hovered_tab = -1
@@ -262,19 +295,19 @@ function update_interaction_ui()
     end
 
     if get_is_text_input_mode() then
-		update_add_ui_interaction(update_get_loc(e_loc.interaction_confirm), e_game_input.text_enter)
-		
-		if update_get_active_input_type() == e_active_input.keyboard then
-			update_add_ui_interaction("", e_game_input.back)
-		else
-			update_add_ui_interaction(update_get_loc(e_loc.interaction_back), e_game_input.back)
-			update_add_ui_interaction_special(update_get_loc(e_loc.interaction_navigate), e_ui_interaction_special.gamepad_dpad_all)
+        update_add_ui_interaction(update_get_loc(e_loc.interaction_confirm), e_game_input.text_enter)
+
+        if update_get_active_input_type() == e_active_input.keyboard then
+            update_add_ui_interaction("", e_game_input.back)
+        else
+            update_add_ui_interaction(update_get_loc(e_loc.interaction_back), e_game_input.back)
+            update_add_ui_interaction_special(update_get_loc(e_loc.interaction_navigate), e_ui_interaction_special.gamepad_dpad_all)
             update_add_ui_interaction(update_get_loc(e_loc.input_text_shift), e_game_input.text_shift)
             update_add_ui_interaction(update_get_loc(e_loc.input_backspace), e_game_input.text_backspace)
             update_add_ui_interaction(update_get_loc(e_loc.input_text_space), e_game_input.text_space)
-			update_add_ui_interaction(update_get_loc(e_loc.interaction_select), e_game_input.interact_a)
-		end
-	elseif update_get_active_input_type() == e_active_input.gamepad then
+            update_add_ui_interaction(update_get_loc(e_loc.interaction_select), e_game_input.interact_a)
+        end
+    elseif update_get_active_input_type() == e_active_input.gamepad then
         if g_focused_screen == g_screens.active_tab then
             if g_active_tab == g_tabs.options then
                 update_add_ui_interaction_special(update_get_loc(e_loc.interaction_navigate), e_ui_interaction_special.gamepad_dpad_ud)
@@ -295,7 +328,7 @@ function update_interaction_ui()
             update_add_ui_interaction_special(update_get_loc(e_loc.interaction_zoom), e_ui_interaction_special.map_zoom)
 
             if g_tab_map.highlighted_carrier_id ~= 0 then
-			    update_add_ui_interaction(update_get_loc(e_loc.interaction_select), e_game_input.interact_a)
+                update_add_ui_interaction(update_get_loc(e_loc.interaction_select), e_game_input.interact_a)
             end
         end
     end
@@ -304,7 +337,7 @@ end
 function set_active_tab(tab)
     if g_active_tab ~= tab then
         g_active_tab = tab
-        
+
         if g_tabs[tab] ~= nil and g_tabs[tab].begin ~= nil then
             g_tabs[tab].begin()
         end
@@ -339,7 +372,7 @@ function render_button(x, y, w, text, is_highlighted, is_pressed)
     update_ui_pop_offset()
 end
 
-function input_event(event, action)
+function pause_input_event(event, action)
     if event == e_input.pointer_1 then
         g_is_pointer_pressed = ((action == e_input_action.press) and (g_is_pointer_hovered == true))
     end
@@ -349,8 +382,8 @@ function input_event(event, action)
     end
 
     if g_edit_text ~= nil and update_get_active_input_type() == e_active_input.keyboard and event ~= e_input.pointer_1 and event ~= e_input.text_backspace and event ~= e_input.text_enter then
-		return
-	end
+        return
+    end
 
     if g_focused_screen == g_screens.menu then
         if event == e_input.left then
@@ -383,10 +416,10 @@ end
 
 function input_pointer(is_hovered, x, y)
     g_is_pointer_hovered = is_hovered
-    
+
     g_pointer_pos_x = x
     g_pointer_pos_y = y
-        
+
     g_tabs[g_active_tab].input_pointer(is_hovered, x, y)
 end
 
@@ -403,11 +436,11 @@ function input_axis(x, y, z, w)
 end
 
 function input_text(text)
-	if g_edit_text ~= nil then
-		g_text[g_edit_text] = g_text[g_edit_text] .. text
-		g_text[g_edit_text] = clamp_str(g_text[g_edit_text], 128)
-		g_text_blink_time = 0
-	end
+    if g_edit_text ~= nil then
+        g_text[g_edit_text] = g_text[g_edit_text] .. text
+        g_text[g_edit_text] = clamp_str(g_text[g_edit_text], 128)
+        g_text_blink_time = 0
+    end
 end
 
 function on_close_pause_menu()
@@ -453,7 +486,7 @@ function tab_map_render(screen_w, screen_h, x, y, w, h, delta_time, is_active)
         else
             tab_map_zoom(1 - (g_input_axis.w * 0.1 * speed_multiplier), screen_w, screen_h)
         end
-        
+
         if g_is_mouse_mode then
             tab_map_zoom(1 - g_pointer_scroll * 0.15, screen_w, screen_h)
         end
@@ -472,7 +505,7 @@ function tab_map_render(screen_w, screen_h, x, y, w, h, delta_time, is_active)
         return get_screen_from_world(x, y, g_tab_map.camera_pos_x, g_tab_map.camera_pos_y, g_tab_map.camera_size, screen_w, screen_h)
     end
 
-    local is_render_islands = (g_tab_map.camera_size < (64 * 1024))
+    local is_render_islands = true
     update_set_screen_background_is_render_islands(is_render_islands)
 
     -- render tiles
@@ -496,7 +529,8 @@ function tab_map_render(screen_w, screen_h, x, y, w, h, delta_time, is_active)
 
     local function filter_highlight_vehicles(v)
         local def = v:get_definition_index()
-        return def == e_game_object_type.chassis_carrier and v:get_team_id() == update_get_local_team_id()
+        return def ~= e_game_object_type.drydock
+        -- return def == e_game_object_type.chassis_carrier and v:get_team_id() == update_get_local_team_id()
     end
 
     -- update highlighted carrier
@@ -524,7 +558,7 @@ function tab_map_render(screen_w, screen_h, x, y, w, h, delta_time, is_active)
 
     local function filter_vehicles(v)
         local def = v:get_definition_index()
-        return (v:get_is_docked() == false or def == e_game_object_type.chassis_carrier) and def ~= e_game_object_type.drydock and def ~= e_game_object_type.chassis_spaceship and v:get_is_observation_revealed()
+        return (v:get_is_docked() == false or def ~= e_game_object_type.drydock)
     end
 
     -- render vehicles
@@ -538,18 +572,11 @@ function tab_map_render(screen_w, screen_h, x, y, w, h, delta_time, is_active)
         local screen_x, screen_y = world_to_screen(position_xz:x(), position_xz:z())
         local vehicle_color = iff(vehicle:get_id() == g_tab_map.highlighted_carrier_id, color_white, team_color)
 
-        if vehicle:get_is_visible() then
+        if true then
             update_ui_image(screen_x - icon_offset, screen_y - icon_offset, icon_region, vehicle_color, 0)
 
             if vehicle:get_id() == respawn_carrier_id and g_animation_time % 500.0 > 250.0 then
                 update_ui_rectangle_outline(screen_x - 8, screen_y - 8, 16, 16, vehicle_color)
-            end
-        else
-            local last_known_position_xz, is_last_known_position_set = vehicle:get_vision_last_known_position_xz()
-
-            if is_last_known_position_set then
-                local screen_x, screen_y = world_to_screen(last_known_position_xz:x(), last_known_position_xz:y())
-                update_ui_image(screen_x - 2, screen_y - 2, atlas_icons.map_icon_last_known_pos, vehicle_color, 0)
             end
         end
     end
@@ -576,11 +603,11 @@ function tab_map_render(screen_w, screen_h, x, y, w, h, delta_time, is_active)
     if is_active then
         local zoom_factor = invlerp(g_tab_map.camera_size, g_tab_map.camera_size_min, g_tab_map.camera_size_max)
 
-        update_ui_text(10, h - 20, 
-            string.format("x:%-6.0f ", g_tab_map.camera_pos_x) .. 
-            string.format("y:%-6.0f ",g_tab_map.camera_pos_y) .. 
-            string.format("z:%.2f", zoom_factor),
-            w - 10, 0, color_grey_dark, 0
+        update_ui_text(10, h - 20,
+                string.format("x:%-6.0f ", g_tab_map.camera_pos_x) ..
+                        string.format("y:%-6.0f ", g_tab_map.camera_pos_y) ..
+                        string.format("z:%.2f", zoom_factor),
+                w - 10, 0, color_grey_dark, 0
         )
     end
 
@@ -619,16 +646,18 @@ function tab_map_render(screen_w, screen_h, x, y, w, h, delta_time, is_active)
         g_tab_map.is_overlay = true
         update_ui_rectangle(0, 0, screen_w, screen_h, color8(0, 0, 0, 200))
 
-        ui:begin_window_dialog(update_get_loc(e_loc.upp_travel_to_carrier).."##confirm_travel", screen_w / 2, screen_h / 2, w - 100, h - 100, atlas_icons.column_distance, is_active)
-        
+        ui:begin_window_dialog(
+                "VIEW".. "##confirm_travel",
+                screen_w / 2, screen_h / 2, w - 100, h - 100, atlas_icons.column_distance, is_active)
+
         if ui:button(update_get_loc(e_loc.upp_cancel), true, 1) then
             g_tab_map.selected_carrier_id = 0
         end
 
         if ui:button(update_get_loc(e_loc.upp_confirm), true, 1) then
-            update_ui_event("character_return_to_bridge", g_tab_map.selected_carrier_id)
+            print(string.format("%d", g_tab_map.selected_carrier_id))
+            update_set_screen_vehicle_control_id(g_tab_map.selected_carrier_id)
             g_tab_map.selected_carrier_id = 0
-            update_exit_pause_menu()
         end
 
         ui:end_window()
@@ -674,7 +703,7 @@ function tab_map_input_event(event, action)
     else
         g_tab_map.ui_container:input_event(event, action)
     end
-    
+
     return false
 end
 
@@ -690,12 +719,16 @@ function focus_world()
     local tile_count = update_get_tile_count()
 
     local function min(a, b)
-        if a == nil then return b end
+        if a == nil then
+            return b
+        end
         return math.min(a, b)
     end
 
     local function max(a, b)
-        if a == nil then return b end
+        if a == nil then
+            return b
+        end
         return math.max(a, b)
     end
 
@@ -710,7 +743,7 @@ function focus_world()
         if tile:get() then
             local tile_pos_xz = tile:get_position_xz()
             local tile_size = tile:get_size()
-            
+
             min_x = min(min_x, tile_pos_xz:x() - tile_size:x() / 2)
             min_z = min(min_z, tile_pos_xz:y() - tile_size:y() / 2)
             max_x = max(max_x, tile_pos_xz:x() + tile_size:x() / 2)
@@ -751,7 +784,7 @@ function tab_game_render(screen_w, screen_h, x, y, w, h, delta_time, is_tab_acti
 
     if g_tab_game.screen_index == 0 then
         ui:begin_window("##main", 5, 5, w - 10, h - 15, atlas_icons.column_pending, is_active or is_mouse_active, 0, true, is_active)
-        
+
         if ui:list_item(update_get_loc(e_loc.upp_return_to_bridge), true, update_get_is_respawn_menu_option_available()) then
             update_ui_event("character_return_to_bridge")
             update_exit_pause_menu()
@@ -762,24 +795,24 @@ function tab_game_render(screen_w, screen_h, x, y, w, h, delta_time, is_tab_acti
         if ui:list_item(update_get_loc(e_loc.upp_save), true, update_get_is_save_game_available()) then
             g_tab_game.screen_index = 2
         end
-    
+
         if ui:list_item(update_get_loc(e_loc.upp_load), true) then
             g_tab_game.screen_index = 1
         end
-    
+
         ui:divider()
-    
+
         if ui:list_item(update_get_loc(e_loc.upp_quit), true) then
             reset()
             update_ui_event("quit_to_menu")
         end
-    
+
         if ui:list_item(update_get_loc(e_loc.upp_quit_to_desktop), true) then
             update_ui_event("quit_game")
         end
-    
+
         ui:divider()
-    
+
         if ui:list_item(update_get_loc(e_loc.upp_report_issue), true) then
             update_ui_event("open_feedback_website")
         end
@@ -787,11 +820,13 @@ function tab_game_render(screen_w, screen_h, x, y, w, h, delta_time, is_tab_acti
         ui:end_window()
     elseif g_tab_game.screen_index == 1 then
         ui:begin_window(update_get_loc(e_loc.upp_load_game), 5, 5, w - 10, h - 15, atlas_icons.column_load, is_active and g_tab_game.confirm_load_slot == nil)
-			
+
         ui:header(update_get_loc(e_loc.upp_save_slots))
 
         local save_slots = update_get_save_slots()
-        table.sort(save_slots, function(a, b) return a.time > b.time end)
+        table.sort(save_slots, function(a, b)
+            return a.time > b.time
+        end)
 
         for i, v in ipairs(save_slots) do
             if ui:save_slot(i, v.display_name, v.save_name, v.time) then
@@ -807,8 +842,8 @@ function tab_game_render(screen_w, screen_h, x, y, w, h, delta_time, is_tab_acti
             g_tab_game.is_overlay = true
             update_ui_rectangle(0, 0, w, h, color8(0, 0, 0, 200))
 
-            ui:begin_window(update_get_loc(e_loc.upp_confirm).."##confirm_load", 60, 60, w - 120, h - 135, nil, is_active, 2)
-            
+            ui:begin_window(update_get_loc(e_loc.upp_confirm) .. "##confirm_load", 60, 60, w - 120, h - 135, nil, is_active, 2)
+
             if ui:button(update_get_loc(e_loc.upp_cancel), true, 1) then
                 g_tab_game.confirm_load_slot = nil
             end
@@ -822,11 +857,13 @@ function tab_game_render(screen_w, screen_h, x, y, w, h, delta_time, is_tab_acti
         end
     elseif g_tab_game.screen_index == 2 then
         ui:begin_window(update_get_loc(e_loc.upp_save_game), 5, 5, w - 10, h - 15, atlas_icons.column_save, is_active and g_tab_game.confirm_save_slot == nil)
-			
+
         ui:header(update_get_loc(e_loc.upp_save_slots))
 
         local save_slots = update_get_save_slots()
-        table.sort(save_slots, function(a, b) return a.time > b.time end)
+        table.sort(save_slots, function(a, b)
+            return a.time > b.time
+        end)
 
         for i, v in ipairs(save_slots) do
             if ui:save_slot(i, v.display_name, v.save_name, v.time) then
@@ -847,7 +884,7 @@ function tab_game_render(screen_w, screen_h, x, y, w, h, delta_time, is_tab_acti
             update_ui_rectangle(0, 0, w, h, color8(0, 0, 0, 200))
 
             ui.window_col_active = iff(#g_tab_game.confirm_save_slot.save_name > 0, color_status_bad, color_white)
-            ui:begin_window(iff(#g_tab_game.confirm_save_slot.save_name > 0, update_get_loc(e_loc.upp_overwrite_save).."?", update_get_loc(e_loc.upp_confirm)) .. "##confirm_save", 60, 40, w - 120, h - 100, nil, is_active, 2)
+            ui:begin_window(iff(#g_tab_game.confirm_save_slot.save_name > 0, update_get_loc(e_loc.upp_overwrite_save) .. "?", update_get_loc(e_loc.upp_confirm)) .. "##confirm_save", 60, 40, w - 120, h - 100, nil, is_active, 2)
             ui:header(update_get_loc(e_loc.upp_save_name))
             ui.window_col_active = color_white
 
@@ -868,34 +905,38 @@ function tab_game_render(screen_w, screen_h, x, y, w, h, delta_time, is_tab_acti
 
             ui:end_window()
         end
+
+        if g_tab_game.screen_index == 5 then
+            print("spec tab")
+        end
     end
 
     if g_edit_text then
         g_tab_game.is_overlay = true
-		update_ui_rectangle(0, 0, w, h, color8(0, 0, 0, 200))
+        update_ui_rectangle(0, 0, w, h, color8(0, 0, 0, 200))
 
         local display_text = g_text[g_edit_text] .. iff(math.floor(g_text_blink_time / 1000 * 30) % 20 > 10, "$[1]|", "$[2]|")
-		local border = 32
-		local text_w, text_h = update_ui_get_text_size(display_text, screen_w - border * 2, 1)
+        local border = 32
+        local text_w, text_h = update_ui_get_text_size(display_text, screen_w - border * 2, 1)
 
         update_ui_push_offset(0, -20)
         update_ui_set_text_color(1, color_empty)
-		update_ui_set_text_color(2, color_highlight)
-		update_ui_rectangle_outline(border - 6, screen_h / 2 - 5 - text_h - 2, screen_w - border * 2 + 12, text_h + 4, color_button_bg_inactive)
-		update_ui_text(border, screen_h / 2 - 5 - text_h, display_text, screen_w - border * 2, 1, color_white, 0)
+        update_ui_set_text_color(2, color_highlight)
+        update_ui_rectangle_outline(border - 6, screen_h / 2 - 5 - text_h - 2, screen_w - border * 2 + 12, text_h + 4, color_button_bg_inactive)
+        update_ui_text(border, screen_h / 2 - 5 - text_h, display_text, screen_w - border * 2, 1, color_white, 0)
 
         ui:begin_window("##keyboard", 0, screen_h / 2, screen_w, screen_h, nil, true, 1)
-		
-		local is_done = false
-		g_keyboard_state, g_text[g_edit_text], is_done = ui:keyboard(g_keyboard_state, g_text[g_edit_text])
-		
-		if is_done then
-			g_edit_text = nil
-		end
 
-		ui:end_window()
+        local is_done = false
+        g_keyboard_state, g_text[g_edit_text], is_done = ui:keyboard(g_keyboard_state, g_text[g_edit_text])
+
+        if is_done then
+            g_edit_text = nil
+        end
+
+        ui:end_window()
         update_ui_pop_offset()
-	end
+    end
 
     ui:end_ui()
     update_ui_pop_offset()
@@ -921,7 +962,7 @@ function tab_game_input_event(event, action)
     elseif action == e_input_action.release then
         g_tab_game.ui_container:input_event(event, action)
     end
-    
+
     return false
 end
 
@@ -995,7 +1036,7 @@ function tab_options_render(screen_w, screen_h, x, y, w, h, delta_time, is_activ
         ui:list_item(update_get_loc(e_loc.upp_gamepad))
     end
     ui:end_window()
-    
+
     imgui_options_menu(ui, rx, 5, rw, lh, is_panel_1_selected, win_main.selected_index_y, is_panel_1_highlight)
 
     ui:end_ui()
@@ -1059,28 +1100,28 @@ function tab_multiplayer_render(screen_w, screen_h, x, y, w, h, delta_time, is_a
 
     if g_tab_multiplayer.screen_index == 0 then
         local is_window_active = (is_active or is_mouse_active) and g_tab_multiplayer.selected_peer_id == 0
-        local win_main = ui:begin_window("##main",  5, 5, w - 10, h - 15, atlas_icons.column_pending, is_window_active, 0, true, is_active and g_tab_multiplayer.selected_peer_id == 0)
+        local win_main = ui:begin_window("##main", 5, 5, w - 10, h - 15, atlas_icons.column_pending, is_window_active, 0, true, is_active and g_tab_multiplayer.selected_peer_id == 0)
 
         if update_get_is_hosting_game() then
             if ui:list_item(update_get_loc(e_loc.upp_public_invite), true) then
-                g_tab_multiplayer.screen_index = 1            
+                g_tab_multiplayer.screen_index = 1
             end
         end
 
         local column_widths = { 25, 160, 15, 18, 33 }
         local column_margins = { 5, 5, 5, 5, 5 }
-    
+
         local header_columns = {
-            { w=column_widths[1], margin=column_margins[1], value=atlas_icons.column_controlling_peer },
-            { w=column_widths[2], margin=column_margins[2], value=atlas_icons.column_profile },
-            { w=column_widths[3], margin=column_margins[3], value="" },
-            { w=column_widths[4], margin=column_margins[4], value=atlas_icons.hud_audio_small },
-            { w=column_widths[5], margin=column_margins[5], value=atlas_icons.column_team_control },
+            { w = column_widths[1], margin = column_margins[1], value = atlas_icons.column_controlling_peer },
+            { w = column_widths[2], margin = column_margins[2], value = atlas_icons.column_profile },
+            { w = column_widths[3], margin = column_margins[3], value = "" },
+            { w = column_widths[4], margin = column_margins[4], value = atlas_icons.hud_audio_small },
+            { w = column_widths[5], margin = column_margins[5], value = atlas_icons.column_team_control },
         }
         imgui_table_header(ui, header_columns)
-    
+
         local peer_count = update_get_peer_count()
-    
+
         for i = 0, peer_count - 1 do
             local name = update_get_peer_name(i)
             local team = update_get_peer_team(i)
@@ -1088,11 +1129,11 @@ function tab_multiplayer_render(screen_w, screen_h, x, y, w, h, delta_time, is_a
             local team_col = update_get_team_color(team)
             local is_admin = update_get_peer_is_admin(i)
 
-            local columns = { 
-                { w=column_widths[1], margin=column_margins[1], value=tostring(id) },
-                { w=column_widths[2], margin=column_margins[2], value=name, is_border=false },
-                { w=column_widths[3], margin=column_margins[3], value=iff(is_admin, atlas_icons.column_difficulty, ""), col=color_status_warning },
-                { w=column_widths[4], margin=column_margins[4], value=function(w, h) 
+            local columns = {
+                { w = column_widths[1], margin = column_margins[1], value = tostring(id) },
+                { w = column_widths[2], margin = column_margins[2], value = name, is_border = false },
+                { w = column_widths[3], margin = column_margins[3], value = iff(is_admin, atlas_icons.column_difficulty, ""), col = color_status_warning },
+                { w = column_widths[4], margin = column_margins[4], value = function(w, h)
                     if update_get_peer_is_voice_muted(i) then
                         if update_get_peer_is_voice_transmit(i) then
                             update_ui_image(0, 2, atlas_icons.hud_audio_small, color_grey_dark, 0)
@@ -1103,12 +1144,12 @@ function tab_multiplayer_render(screen_w, screen_h, x, y, w, h, delta_time, is_a
                         update_ui_image(0, 2, atlas_icons.hud_audio_small, iff(is_window_active, color_status_ok, color_grey_dark), 0)
                     end
                 end },
-                { w=column_widths[5], margin=column_margins[5], value=function(w, h) 
-                    update_ui_image(0, 3, atlas_icons.column_team_control, iff(is_window_active, team_col, color_grey_dark), 0)  
+                { w = column_widths[5], margin = column_margins[5], value = function(w, h)
+                    update_ui_image(0, 3, atlas_icons.column_team_control, iff(is_window_active, team_col, color_grey_dark), 0)
                     update_ui_text(8, 3, tostring(team), w, 0, iff(is_window_active, team_col, color_grey_dark), 0)
                 end },
             }
-    
+
             if imgui_table_entry(ui, columns, true) then
                 g_tab_multiplayer.selected_peer_id = id
             end
@@ -1128,7 +1169,7 @@ function tab_multiplayer_render(screen_w, screen_h, x, y, w, h, delta_time, is_a
                 local win_w = w - 80
                 local win_h = h - 80
 
-                local win_peer = ui:begin_window(name .. "##peer",  40, 40, win_w, { max_h=win_h }, atlas_icons.column_pending, (is_active or is_mouse_active) and g_tab_multiplayer.confirm_ban_peer == false, 2, true, is_active and g_tab_multiplayer.confirm_ban_peer == false)
+                local win_peer = ui:begin_window(name .. "##peer", 40, 40, win_w, { max_h = win_h }, atlas_icons.column_pending, (is_active or is_mouse_active) and g_tab_multiplayer.confirm_ban_peer == false, 2, true, is_active and g_tab_multiplayer.confirm_ban_peer == false)
 
                 ui:header(update_get_loc(e_loc.upp_actions))
 
@@ -1145,7 +1186,7 @@ function tab_multiplayer_render(screen_w, screen_h, x, y, w, h, delta_time, is_a
                 if ui:list_item(update_get_loc(e_loc.upp_kick_player), true, is_self == false and is_admin == false) then
                     update_ui_event("host_kick_peer", g_tab_multiplayer.selected_peer_id)
                 end
-                
+
                 if ui:list_item(update_get_loc(e_loc.upp_ban_player), true, is_self == false and is_admin == false) then
                     g_tab_multiplayer.confirm_ban_peer = true
                 end
@@ -1155,7 +1196,7 @@ function tab_multiplayer_render(screen_w, screen_h, x, y, w, h, delta_time, is_a
                 if g_tab_multiplayer.confirm_ban_peer then
                     ui.window_col_active = color_status_bad
                     ui:begin_window_dialog(update_get_loc(e_loc.upp_sure), screen_w / 2, screen_h / 2, win_w - 20, win_h, atlas_icons.hud_warning, (is_active or is_mouse_active))
-                    
+
                     ui:text_basic(update_get_loc(e_loc.confirm_ban_player), color_grey_dark)
                     ui:spacer(5)
 
@@ -1173,21 +1214,21 @@ function tab_multiplayer_render(screen_w, screen_h, x, y, w, h, delta_time, is_a
             end
         end
     elseif g_tab_multiplayer.screen_index == 1 then
-        local win_main = ui:begin_window(update_get_loc(e_loc.upp_public_invite).."##main", 5, 5, w - 10, h - 15, atlas_icons.column_pending, is_active or is_mouse_active, 0, true, is_active)
-        
+        local win_main = ui:begin_window(update_get_loc(e_loc.upp_public_invite) .. "##main", 5, 5, w - 10, h - 15, atlas_icons.column_pending, is_active or is_mouse_active, 0, true, is_active)
+
         if update_get_is_hosting_game() then
             ui:header(update_get_loc(e_loc.upp_invite_code))
             ui:text_basic(update_get_loc(e_loc.invite_code_desc), color_grey_dark)
-    
+
             local connect_token = update_get_host_connect_token()
             local obscured_token = connect_token:sub(1, 3) .. "***********" .. connect_token:sub(#connect_token - 2)
-    
+
             ui:spacer(3)
             ui:text_basic(obscured_token, color_grey_mid, nil, 1)
             ui:spacer(4)
-            
+
             local button_action = ui:button_group({ update_get_loc(e_loc.copy_code), update_get_loc(e_loc.regenerate_code) }, true)
-    
+
             if button_action == 0 then
                 update_ui_event("copy_to_clipboard", connect_token)
                 g_tab_multiplayer.toast_time = g_animation_time
@@ -1199,7 +1240,7 @@ function tab_multiplayer_render(screen_w, screen_h, x, y, w, h, delta_time, is_a
                 g_tab_multiplayer.toast_text = update_get_loc(e_loc.regenerated_invite_code)
                 g_tab_multiplayer.toast_col = color_status_warning
             end
-    
+
             ui:spacer(5)
         end
 
@@ -1207,7 +1248,7 @@ function tab_multiplayer_render(screen_w, screen_h, x, y, w, h, delta_time, is_a
 
         if g_tab_multiplayer.toast_time ~= nil and g_animation_time - g_tab_multiplayer.toast_time < 1500 then
             local anim_factor = (g_animation_time - g_tab_multiplayer.toast_time) / 1500
-            
+
             if anim_factor < 0.1 then
                 anim_factor = anim_factor / 0.1
             elseif anim_factor > 0.9 then
@@ -1215,7 +1256,7 @@ function tab_multiplayer_render(screen_w, screen_h, x, y, w, h, delta_time, is_a
             else
                 anim_factor = 1
             end
-    
+
             update_ui_push_offset(15, h - 31)
             update_ui_push_clip(0, 0, w - 30, math.floor(16 * anim_factor + 0.5))
             update_ui_rectangle(0, 0, w - 30, 16, color_black)
@@ -1291,7 +1332,7 @@ function tab_manual_render(screen_w, screen_h, x, y, w, h, delta_time, is_active
     ui:begin_ui(delta_time)
 
     local manual_sections = {
-        { 
+        {
             title = update_get_loc(e_loc.upp_game_objectives),
             content = {
                 { "h", update_get_loc(e_loc.upp_objectives) },
@@ -1304,33 +1345,33 @@ function tab_manual_render(screen_w, screen_h, x, y, w, h, delta_time, is_active
                 update_get_loc(e_loc.manual_game_objectives_capturing_3)
             }
         },
-        { 
+        {
             title = update_get_loc(e_loc.upp_helm),
             content = {
                 { "h", update_get_loc(e_loc.upp_overview) },
-                { update_get_loc(e_loc.manual_helm_overview), tag="helm" },
+                { update_get_loc(e_loc.manual_helm_overview), tag = "helm" },
 
                 { "h", update_get_loc(e_loc.upp_screens) },
-                { "s", update_get_loc(e_loc.propulsion), update_get_loc(e_loc.manual_helm_screens_propulsion), tag="helm_screen_propulsion" },
-                { "s", update_get_loc(e_loc.compass), update_get_loc(e_loc.manual_helm_screens_compass), tag="helm_screen_compass" },
-                { "s", update_get_loc(e_loc.depth_sonar), update_get_loc(e_loc.manual_helm_screens_depth_sonar), tag="helm_screen_depth_radar" },
-                { "s", update_get_loc(e_loc.navigation), update_get_loc(e_loc.manual_helm_screens_navigation), tag="helm_screen_navigation" },
+                { "s", update_get_loc(e_loc.propulsion), update_get_loc(e_loc.manual_helm_screens_propulsion), tag = "helm_screen_propulsion" },
+                { "s", update_get_loc(e_loc.compass), update_get_loc(e_loc.manual_helm_screens_compass), tag = "helm_screen_compass" },
+                { "s", update_get_loc(e_loc.depth_sonar), update_get_loc(e_loc.manual_helm_screens_depth_sonar), tag = "helm_screen_depth_radar" },
+                { "s", update_get_loc(e_loc.navigation), update_get_loc(e_loc.manual_helm_screens_navigation), tag = "helm_screen_navigation" },
 
                 { "h", update_get_loc(e_loc.upp_buttons) },
-                { "b", atlas_icons.help_button_green, update_get_loc(e_loc.engine_start), update_get_loc(e_loc.manual_helm_buttons_engine_start), tag="helm_button_engine_on" },
-                { "b", atlas_icons.help_button_red, update_get_loc(e_loc.engine_stop), update_get_loc(e_loc.manual_helm_buttons_engine_stop), tag="helm_button_engine_off" },
-                { "b", atlas_icons.help_button_grey, update_get_loc(e_loc.side_thrusters), update_get_loc(e_loc.manual_helm_buttons_side_thrusters), tag="helm_button_side_thrusters" },
-                { "b", atlas_icons.help_button_grey, update_get_loc(e_loc.reverse), update_get_loc(e_loc.manual_helm_buttons_reverse), tag="helm_button_reverse_gear" },
-                { "b", atlas_icons.help_button_switch, update_get_loc(e_loc.steering_lock), update_get_loc(e_loc.manual_helm_buttons_steering_lock), tag="helm_button_steering_lock" },
-                { "b", atlas_icons.help_button_switch, update_get_loc(e_loc.maintain_heading), update_get_loc(e_loc.manual_helm_buttons_maintain_heading), tag="helm_button_maintain_heading" },
-                { "b", atlas_icons.help_button_switch, update_get_loc(e_loc.navigation_lights), update_get_loc(e_loc.manual_helm_buttons_navigation_lights), tag="helm_button_nav_lights" },
-                { "b", atlas_icons.help_button_switch, update_get_loc(e_loc.headlights), update_get_loc(e_loc.manual_helm_buttons_headlights), tag="helm_button_headlights" },
-                { "b", atlas_icons.help_button_grey_small, update_get_loc(e_loc.headlights_up).."/"..update_get_loc(e_loc.headlights_down), update_get_loc(e_loc.manual_helm_buttons_headlights_up_down), tag="helm_button_headlights_ud" },
-                { "b", atlas_icons.help_button_red, update_get_loc(e_loc.activate), update_get_loc(e_loc.manual_helm_buttons_activate), tag="helm_button_alarm_on" },
-                { "b", atlas_icons.help_button_grey, update_get_loc(e_loc.silence), update_get_loc(e_loc.manual_helm_buttons_silence), tag="helm_button_alarm_off" },
+                { "b", atlas_icons.help_button_green, update_get_loc(e_loc.engine_start), update_get_loc(e_loc.manual_helm_buttons_engine_start), tag = "helm_button_engine_on" },
+                { "b", atlas_icons.help_button_red, update_get_loc(e_loc.engine_stop), update_get_loc(e_loc.manual_helm_buttons_engine_stop), tag = "helm_button_engine_off" },
+                { "b", atlas_icons.help_button_grey, update_get_loc(e_loc.side_thrusters), update_get_loc(e_loc.manual_helm_buttons_side_thrusters), tag = "helm_button_side_thrusters" },
+                { "b", atlas_icons.help_button_grey, update_get_loc(e_loc.reverse), update_get_loc(e_loc.manual_helm_buttons_reverse), tag = "helm_button_reverse_gear" },
+                { "b", atlas_icons.help_button_switch, update_get_loc(e_loc.steering_lock), update_get_loc(e_loc.manual_helm_buttons_steering_lock), tag = "helm_button_steering_lock" },
+                { "b", atlas_icons.help_button_switch, update_get_loc(e_loc.maintain_heading), update_get_loc(e_loc.manual_helm_buttons_maintain_heading), tag = "helm_button_maintain_heading" },
+                { "b", atlas_icons.help_button_switch, update_get_loc(e_loc.navigation_lights), update_get_loc(e_loc.manual_helm_buttons_navigation_lights), tag = "helm_button_nav_lights" },
+                { "b", atlas_icons.help_button_switch, update_get_loc(e_loc.headlights), update_get_loc(e_loc.manual_helm_buttons_headlights), tag = "helm_button_headlights" },
+                { "b", atlas_icons.help_button_grey_small, update_get_loc(e_loc.headlights_up) .. "/" .. update_get_loc(e_loc.headlights_down), update_get_loc(e_loc.manual_helm_buttons_headlights_up_down), tag = "helm_button_headlights_ud" },
+                { "b", atlas_icons.help_button_red, update_get_loc(e_loc.activate), update_get_loc(e_loc.manual_helm_buttons_activate), tag = "helm_button_alarm_on" },
+                { "b", atlas_icons.help_button_grey, update_get_loc(e_loc.silence), update_get_loc(e_loc.manual_helm_buttons_silence), tag = "helm_button_alarm_off" },
             }
         },
-        { 
+        {
             title = update_get_loc(e_loc.upp_defensive_weapons),
             content = {
                 { "h", update_get_loc(e_loc.upp_overview) },
@@ -1341,40 +1382,40 @@ function tab_manual_render(screen_w, screen_h, x, y, w, h, delta_time, is_active
                 update_get_loc(e_loc.manual_defensive_weapons_aa_missile_1),
                 update_get_loc(e_loc.manual_defensive_weapons_aa_missile_2),
 
-                { "h", update_get_loc(e_loc.upp_ciws_guns)},
+                { "h", update_get_loc(e_loc.upp_ciws_guns) },
                 update_get_loc(e_loc.manual_defensive_weapons_ciws_guns_1),
                 update_get_loc(e_loc.manual_defensive_weapons_ciws_guns_2),
 
                 { "h", update_get_loc(e_loc.upp_screens) },
-                { "s", update_get_loc(e_loc.aa_status), update_get_loc(e_loc.manual_defensive_weapons_screens_aa), tag="def_wep_screen_aa_status" },
-                { "s", update_get_loc(e_loc.ciws_status), update_get_loc(e_loc.manual_defensive_weapons_screens_ciws), tag="def_wep_screen_ciws_status" },
+                { "s", update_get_loc(e_loc.aa_status), update_get_loc(e_loc.manual_defensive_weapons_screens_aa), tag = "def_wep_screen_aa_status" },
+                { "s", update_get_loc(e_loc.ciws_status), update_get_loc(e_loc.manual_defensive_weapons_screens_ciws), tag = "def_wep_screen_ciws_status" },
 
                 { "h", update_get_loc(e_loc.upp_buttons) },
-                { "b", atlas_icons.help_button_covered, update_get_loc(e_loc.aa_armed).." (x2)", update_get_loc(e_loc.manual_defensive_weapons_buttons_aa), tag="def_wep_button_aa_armed" },
-                { "b", atlas_icons.help_button_grey, update_get_loc(e_loc.missile_fire).." (x2)", update_get_loc(e_loc.manual_defensive_weapons_buttons_missile), tag="def_wep_button_missile_fire" },
-                { "b", atlas_icons.help_button_covered, update_get_loc(e_loc.ciws_armed).." (x4)", update_get_loc(e_loc.manual_defensive_weapons_buttons_ciws), tag="def_wep_button_ciws_armed" },
+                { "b", atlas_icons.help_button_covered, update_get_loc(e_loc.aa_armed) .. " (x2)", update_get_loc(e_loc.manual_defensive_weapons_buttons_aa), tag = "def_wep_button_aa_armed" },
+                { "b", atlas_icons.help_button_grey, update_get_loc(e_loc.missile_fire) .. " (x2)", update_get_loc(e_loc.manual_defensive_weapons_buttons_missile), tag = "def_wep_button_missile_fire" },
+                { "b", atlas_icons.help_button_covered, update_get_loc(e_loc.ciws_armed) .. " (x4)", update_get_loc(e_loc.manual_defensive_weapons_buttons_ciws), tag = "def_wep_button_ciws_armed" },
             }
         },
-        { 
+        {
             title = update_get_loc(e_loc.upp_support_weapons),
             content = {
                 { "h", update_get_loc(e_loc.upp_overview) },
                 update_get_loc(e_loc.manual_support_weapons_overview_1),
                 update_get_loc(e_loc.manual_support_weapons_overview_2),
                 update_get_loc(e_loc.manual_support_weapons_overview_3),
-                
+
                 { "h", update_get_loc(e_loc.upp_screens) },
-                { "s", update_get_loc(e_loc.support_weapons), update_get_loc(e_loc.manual_support_weapons_screens_support_weapons), tag="sup_wep_screen_support" },
-                { "s", update_get_loc(e_loc.viewing_scope), update_get_loc(e_loc.manual_support_weapons_screens_viewing_scope), tag="sup_wep_screen_scope" },
+                { "s", update_get_loc(e_loc.support_weapons), update_get_loc(e_loc.manual_support_weapons_screens_support_weapons), tag = "sup_wep_screen_support" },
+                { "s", update_get_loc(e_loc.viewing_scope), update_get_loc(e_loc.manual_support_weapons_screens_viewing_scope), tag = "sup_wep_screen_scope" },
 
                 { "h", update_get_loc(e_loc.upp_buttons) },
-                { "b", atlas_icons.help_button_covered, update_get_loc(e_loc.cruise_missile_armed), update_get_loc(e_loc.manual_support_weapons_buttons_missile), tag="sup_wep_button_msl_armed" },
-                { "b", atlas_icons.help_button_covered, update_get_loc(e_loc.main_gun_armed), update_get_loc(e_loc.manual_support_weapons_buttons_main_gun), tag="sup_wep_button_gun_armed" },
-                { "b", atlas_icons.help_button_covered, update_get_loc(e_loc.flare_launcher_armed), update_get_loc(e_loc.manual_support_weapons_buttons_flare), tag="sup_wep_button_flare_armed" },
-                { "b", atlas_icons.help_button_red, update_get_loc(e_loc.flare_fire), update_get_loc(e_loc.manual_support_weapons_buttons_flare_fire), tag="sup_wep_button_flare_fire" },
+                { "b", atlas_icons.help_button_covered, update_get_loc(e_loc.cruise_missile_armed), update_get_loc(e_loc.manual_support_weapons_buttons_missile), tag = "sup_wep_button_msl_armed" },
+                { "b", atlas_icons.help_button_covered, update_get_loc(e_loc.main_gun_armed), update_get_loc(e_loc.manual_support_weapons_buttons_main_gun), tag = "sup_wep_button_gun_armed" },
+                { "b", atlas_icons.help_button_covered, update_get_loc(e_loc.flare_launcher_armed), update_get_loc(e_loc.manual_support_weapons_buttons_flare), tag = "sup_wep_button_flare_armed" },
+                { "b", atlas_icons.help_button_red, update_get_loc(e_loc.flare_fire), update_get_loc(e_loc.manual_support_weapons_buttons_flare_fire), tag = "sup_wep_button_flare_fire" },
             }
         },
-        { 
+        {
             title = update_get_loc(e_loc.upp_naval_weapons),
             content = {
                 { "h", update_get_loc(e_loc.upp_overview) },
@@ -1384,7 +1425,7 @@ function tab_manual_render(screen_w, screen_h, x, y, w, h, delta_time, is_active
                 { "h", update_get_loc(e_loc.upp_torpedo) },
                 update_get_loc(e_loc.manual_naval_weapons_torpedo_1),
                 update_get_loc(e_loc.manual_naval_weapons_torpedo_2),
-                
+
                 { "h", update_get_loc(e_loc.upp_torpedo_noisemaker) },
                 update_get_loc(e_loc.manual_naval_weapons_noisemaker_1),
                 update_get_loc(e_loc.manual_naval_weapons_noisemaker_2),
@@ -1394,20 +1435,20 @@ function tab_manual_render(screen_w, screen_h, x, y, w, h, delta_time, is_active
                 update_get_loc(e_loc.manual_naval_weapons_decoy_2),
 
                 { "h", update_get_loc(e_loc.upp_screens) },
-                { "s", update_get_loc(e_loc.air_sea_radar), update_get_loc(e_loc.manual_naval_weapons_screens_air_sea_radar), tag="nav_wep_screen_radar" },
+                { "s", update_get_loc(e_loc.air_sea_radar), update_get_loc(e_loc.manual_naval_weapons_screens_air_sea_radar), tag = "nav_wep_screen_radar" },
 
                 { "h", update_get_loc(e_loc.upp_buttons) },
-                { "b", atlas_icons.help_button_covered, update_get_loc(e_loc.torpedo_armed), update_get_loc(e_loc.manual_naval_weapons_buttons_torpedo_armed), tag="nav_wep_button_torp_armed" },
-                { "b", atlas_icons.help_button_grey_small, update_get_loc(e_loc.activation_delay), update_get_loc(e_loc.manual_naval_weapons_buttons_activation_delay), tag="nav_wep_button_delay_ud" },
-                { "b", atlas_icons.help_button_grey_small, update_get_loc(e_loc.bearing), update_get_loc(e_loc.manual_naval_weapons_buttons_bearing), tag="nav_wep_button_bearing_ud" },
-                { "b", atlas_icons.help_button_red, update_get_loc(e_loc.launch_torpedo).." (x4)", update_get_loc(e_loc.manual_naval_weapons_buttons_launch_torpedo), tag="nav_wep_button_torp_launch" },
-                { "b", atlas_icons.help_button_grey_small, update_get_loc(e_loc.load_torpedo).." (x4)", update_get_loc(e_loc.manual_naval_weapons_buttons_load_torpedo), tag="nav_wep_button_torp_load" },
-                { "b", atlas_icons.help_button_grey_small, update_get_loc(e_loc.load_noisemaker).." (x4)", update_get_loc(e_loc.manual_naval_weapons_buttons_load_noisemaker), tag="nav_wep_button_noise_load" },
-                { "b", atlas_icons.help_button_covered, update_get_loc(e_loc.countermeasure_armed), update_get_loc(e_loc.manual_naval_weapons_buttons_countermeasure_armed), tag="nav_wep_button_count_armed" },
-                { "b", atlas_icons.help_button_red, update_get_loc(e_loc.launch_countermeasure), update_get_loc(e_loc.manual_naval_weapons_buttons_launch_countermeasure), tag="nav_wep_button_count_launch" },
+                { "b", atlas_icons.help_button_covered, update_get_loc(e_loc.torpedo_armed), update_get_loc(e_loc.manual_naval_weapons_buttons_torpedo_armed), tag = "nav_wep_button_torp_armed" },
+                { "b", atlas_icons.help_button_grey_small, update_get_loc(e_loc.activation_delay), update_get_loc(e_loc.manual_naval_weapons_buttons_activation_delay), tag = "nav_wep_button_delay_ud" },
+                { "b", atlas_icons.help_button_grey_small, update_get_loc(e_loc.bearing), update_get_loc(e_loc.manual_naval_weapons_buttons_bearing), tag = "nav_wep_button_bearing_ud" },
+                { "b", atlas_icons.help_button_red, update_get_loc(e_loc.launch_torpedo) .. " (x4)", update_get_loc(e_loc.manual_naval_weapons_buttons_launch_torpedo), tag = "nav_wep_button_torp_launch" },
+                { "b", atlas_icons.help_button_grey_small, update_get_loc(e_loc.load_torpedo) .. " (x4)", update_get_loc(e_loc.manual_naval_weapons_buttons_load_torpedo), tag = "nav_wep_button_torp_load" },
+                { "b", atlas_icons.help_button_grey_small, update_get_loc(e_loc.load_noisemaker) .. " (x4)", update_get_loc(e_loc.manual_naval_weapons_buttons_load_noisemaker), tag = "nav_wep_button_noise_load" },
+                { "b", atlas_icons.help_button_covered, update_get_loc(e_loc.countermeasure_armed), update_get_loc(e_loc.manual_naval_weapons_buttons_countermeasure_armed), tag = "nav_wep_button_count_armed" },
+                { "b", atlas_icons.help_button_red, update_get_loc(e_loc.launch_countermeasure), update_get_loc(e_loc.manual_naval_weapons_buttons_launch_countermeasure), tag = "nav_wep_button_count_launch" },
             }
         },
-        { 
+        {
             title = update_get_loc(e_loc.upp_power),
             content = {
                 { "h", update_get_loc(e_loc.upp_overview) },
@@ -1416,22 +1457,22 @@ function tab_manual_render(screen_w, screen_h, x, y, w, h, delta_time, is_active
                 update_get_loc(e_loc.manual_power_overview_3),
 
                 { "h", update_get_loc(e_loc.upp_screens) },
-                { "s", update_get_loc(e_loc.power), update_get_loc(e_loc.manual_power_screens), tag="power_screen_power" },
+                { "s", update_get_loc(e_loc.power), update_get_loc(e_loc.manual_power_screens), tag = "power_screen_power" },
                 { "ic", atlas_icons.help_icon_indicator, color_status_ok, update_get_loc(e_loc.fully_powered) },
                 { "ic", atlas_icons.help_icon_indicator, color_status_warning, update_get_loc(e_loc.sharing_power) },
                 { "ic", atlas_icons.help_icon_indicator, color_status_bad, update_get_loc(e_loc.no_power) },
                 { "ic", atlas_icons.help_icon_indicator, color_grey_dark, update_get_loc(e_loc.disabled) },
 
                 { "h", update_get_loc(e_loc.upp_buttons) },
-                { "b", atlas_icons.help_button_switch, update_get_loc(e_loc.breaker_main), update_get_loc(e_loc.manual_power_buttons_main), tag="power_button_main" },
-                { "b", atlas_icons.help_button_switch, update_get_loc(e_loc.breaker_repair), update_get_loc(e_loc.manual_power_buttons_repair), tag="power_button_repairs" },
-                { "b", atlas_icons.help_button_switch, update_get_loc(e_loc.breaker_propulsion), update_get_loc(e_loc.manual_power_buttons_propulsion), tag="power_button_propulsion" },
-                { "b", atlas_icons.help_button_switch, update_get_loc(e_loc.breaker_weapons), update_get_loc(e_loc.manual_power_buttons_weapons), tag="power_button_weapons" },
-                { "b", atlas_icons.help_button_switch, update_get_loc(e_loc.breaker_radar), update_get_loc(e_loc.manual_power_buttons_radar), tag="power_button_radar" },
-                { "b", atlas_icons.help_button_switch, update_get_loc(e_loc.breaker_lift), update_get_loc(e_loc.manual_power_buttons_lift), tag="power_button_lift" },
+                { "b", atlas_icons.help_button_switch, update_get_loc(e_loc.breaker_main), update_get_loc(e_loc.manual_power_buttons_main), tag = "power_button_main" },
+                { "b", atlas_icons.help_button_switch, update_get_loc(e_loc.breaker_repair), update_get_loc(e_loc.manual_power_buttons_repair), tag = "power_button_repairs" },
+                { "b", atlas_icons.help_button_switch, update_get_loc(e_loc.breaker_propulsion), update_get_loc(e_loc.manual_power_buttons_propulsion), tag = "power_button_propulsion" },
+                { "b", atlas_icons.help_button_switch, update_get_loc(e_loc.breaker_weapons), update_get_loc(e_loc.manual_power_buttons_weapons), tag = "power_button_weapons" },
+                { "b", atlas_icons.help_button_switch, update_get_loc(e_loc.breaker_radar), update_get_loc(e_loc.manual_power_buttons_radar), tag = "power_button_radar" },
+                { "b", atlas_icons.help_button_switch, update_get_loc(e_loc.breaker_lift), update_get_loc(e_loc.manual_power_buttons_lift), tag = "power_button_lift" },
             }
         },
-        { 
+        {
             title = update_get_loc(e_loc.upp_repair),
             content = {
                 { "h", update_get_loc(e_loc.upp_overview) },
@@ -1449,10 +1490,10 @@ function tab_manual_render(screen_w, screen_h, x, y, w, h, delta_time, is_active
                 update_get_loc(e_loc.manual_repair_repairing_2),
 
                 { "h", update_get_loc(e_loc.upp_screens) },
-                { "s", update_get_loc(e_loc.damage_repair), update_get_loc(e_loc.manual_repair_screens), tag="repair_screen_repair" },
+                { "s", update_get_loc(e_loc.damage_repair), update_get_loc(e_loc.manual_repair_screens), tag = "repair_screen_repair" },
             }
         },
-        { 
+        {
             title = update_get_loc(e_loc.upp_vehicle_loadout),
             content = {
                 { "h", update_get_loc(e_loc.upp_overview) },
@@ -1469,10 +1510,10 @@ function tab_manual_render(screen_w, screen_h, x, y, w, h, delta_time, is_active
                 update_get_loc(e_loc.manual_vehicle_loadout_chassis_2),
 
                 { "h", update_get_loc(e_loc.upp_screens) },
-                { "s", update_get_loc(e_loc.screen_vehicle_loadout), update_get_loc(e_loc.manual_vehicle_loadout_screens), tag="veh_load_screen_loadout" },
+                { "s", update_get_loc(e_loc.screen_vehicle_loadout), update_get_loc(e_loc.manual_vehicle_loadout_screens), tag = "veh_load_screen_loadout" },
             }
         },
-        { 
+        {
             title = update_get_loc(e_loc.upp_vehicle_control),
             content = {
                 { "h", update_get_loc(e_loc.upp_overview) },
@@ -1492,13 +1533,13 @@ function tab_manual_render(screen_w, screen_h, x, y, w, h, delta_time, is_active
                 update_get_loc(e_loc.manual_vehicle_control_map_menus_4),
 
                 { "h", update_get_loc(e_loc.upp_screens) },
-                { "s", update_get_loc(e_loc.vehicle_control), update_get_loc(e_loc.manual_vehicle_control_screens_vehicle_control), tag="veh_con_screen_vehicle_control" },
-                { "s", update_get_loc(e_loc.screen_air_traffic), update_get_loc(e_loc.manual_vehicle_control_screens_air_traffic), tag="veh_con_screen_air_traffic" },
+                { "s", update_get_loc(e_loc.vehicle_control), update_get_loc(e_loc.manual_vehicle_control_screens_vehicle_control), tag = "veh_con_screen_vehicle_control" },
+                { "s", update_get_loc(e_loc.screen_air_traffic), update_get_loc(e_loc.manual_vehicle_control_screens_air_traffic), tag = "veh_con_screen_air_traffic" },
 
                 { "h", update_get_loc(e_loc.upp_buttons) },
-                { "b", atlas_icons.help_button_grey_small, update_get_loc(e_loc.deploy_s1_s8), update_get_loc(e_loc.manual_vehicle_control_buttons_s), tag="veh_con_button_deploy_land" },
-                { "b", atlas_icons.help_button_grey_small, update_get_loc(e_loc.deploy_a1_a8), update_get_loc(e_loc.manual_vehicle_control_buttons_a), tag="veh_con_button_deploy_air" },
-                { "b", atlas_icons.help_button_red, update_get_loc(e_loc.button_hold_on_deck), update_get_loc(e_loc.manual_vehicle_control_button_hold_air), tag="veh_con_button_hold_air" },
+                { "b", atlas_icons.help_button_grey_small, update_get_loc(e_loc.deploy_s1_s8), update_get_loc(e_loc.manual_vehicle_control_buttons_s), tag = "veh_con_button_deploy_land" },
+                { "b", atlas_icons.help_button_grey_small, update_get_loc(e_loc.deploy_a1_a8), update_get_loc(e_loc.manual_vehicle_control_buttons_a), tag = "veh_con_button_deploy_air" },
+                { "b", atlas_icons.help_button_red, update_get_loc(e_loc.button_hold_on_deck), update_get_loc(e_loc.manual_vehicle_control_button_hold_air), tag = "veh_con_button_hold_air" },
 
                 { "h", update_get_loc(e_loc.upp_map_key) },
                 { "ic16", atlas_icons.map_icon_waypoint, color8(0, 255, 255, 8), update_get_loc(e_loc.vehicle_waypoint) },
@@ -1539,7 +1580,7 @@ function tab_manual_render(screen_w, screen_h, x, y, w, h, delta_time, is_active
                 { "ic16", atlas_icons.icon_attack_type_torpedo_single, color_enemy, update_get_loc(e_loc.attack_torpedo_single) },
             }
         },
-        { 
+        {
             title = update_get_loc(e_loc.upp_vehicle_operation),
             content = {
                 { "h", update_get_loc(e_loc.upp_overview) },
@@ -1563,14 +1604,14 @@ function tab_manual_render(screen_w, screen_h, x, y, w, h, delta_time, is_active
                 update_get_loc(e_loc.manual_vehicle_operation_multiplayer_3),
             }
         },
-        { 
+        {
             title = update_get_loc(e_loc.upp_inventory),
             content = {
                 { "h", update_get_loc(e_loc.upp_overview) },
                 update_get_loc(e_loc.manual_inventory_overview_1),
-         
+
                 { "h", update_get_loc(e_loc.upp_screens) },
-                { "s", update_get_loc(e_loc.inventory_logistics), update_get_loc(e_loc.manual_inventory_screens_1), tag="inventory_screen_inventory" },
+                { "s", update_get_loc(e_loc.inventory_logistics), update_get_loc(e_loc.manual_inventory_screens_1), tag = "inventory_screen_inventory" },
 
                 { "h", update_get_loc(e_loc.upp_tab_stock) },
                 update_get_loc(e_loc.manual_inventory_tab_stock_1),
@@ -1589,7 +1630,7 @@ function tab_manual_render(screen_w, screen_h, x, y, w, h, delta_time, is_active
 
                 { "h", update_get_loc(e_loc.upp_map_key) },
                 { "ic16", atlas_icons.map_icon_barge, color8(0, 255, 64, 255), update_get_loc(e_loc.barge) },
-                { "ic16", atlas_icons.map_icon_carrier, color8(0, 64, 255, 255),update_get_loc(e_loc.carrier) },
+                { "ic16", atlas_icons.map_icon_carrier, color8(0, 64, 255, 255), update_get_loc(e_loc.carrier) },
                 { "d" },
                 { "ic16", atlas_icons.map_icon_warehouse, color8(255, 128, 0, 255), update_get_loc(e_loc.warehouse) },
                 { "ic16", atlas_icons.map_icon_factory_barge, color8(255, 128, 0, 255), update_get_loc(e_loc.factory_barge) },
@@ -1612,7 +1653,7 @@ function tab_manual_render(screen_w, screen_h, x, y, w, h, delta_time, is_active
                 update_get_loc(e_loc.manual_logistics_factories_1),
 
                 { "h", update_get_loc(e_loc.upp_warehouses) },
-                {  update_get_loc(e_loc.manual_logistics_warehouses_1) },
+                { update_get_loc(e_loc.manual_logistics_warehouses_1) },
 
                 { "h", update_get_loc(e_loc.upp_blueprints) },
                 update_get_loc(e_loc.manual_logistics_blueprints_1),
@@ -1624,7 +1665,7 @@ function tab_manual_render(screen_w, screen_h, x, y, w, h, delta_time, is_active
                 update_get_loc(e_loc.manual_logistics_barges_3),
             }
         },
-        { 
+        {
             title = update_get_loc(e_loc.upp_delivery_log),
             content = {
                 { "h", update_get_loc(e_loc.upp_overview) },
@@ -1632,10 +1673,10 @@ function tab_manual_render(screen_w, screen_h, x, y, w, h, delta_time, is_active
                 update_get_loc(e_loc.manual_delivery_log_overview_2),
 
                 { "h", update_get_loc(e_loc.upp_screens) },
-                { "s", update_get_loc(e_loc.delivery_log), update_get_loc(e_loc.manual_delivery_log_screens_1), tag="ship_log_screen_delivery" },
+                { "s", update_get_loc(e_loc.delivery_log), update_get_loc(e_loc.manual_delivery_log_screens_1), tag = "ship_log_screen_delivery" },
             }
         },
-        { 
+        {
             title = update_get_loc(e_loc.upp_ship_log),
             content = {
                 { "h", update_get_loc(e_loc.upp_overview) },
@@ -1644,10 +1685,10 @@ function tab_manual_render(screen_w, screen_h, x, y, w, h, delta_time, is_active
                 update_get_loc(e_loc.manual_ship_log_overview_3),
 
                 { "h", update_get_loc(e_loc.upp_screens) },
-                { "s", update_get_loc(e_loc.ship_log), update_get_loc(e_loc.manual_ship_log_screens_1), tag="ship_log_screen_log" },
+                { "s", update_get_loc(e_loc.ship_log), update_get_loc(e_loc.manual_ship_log_screens_1), tag = "ship_log_screen_log" },
             }
         },
-        { 
+        {
             title = update_get_loc(e_loc.upp_currency_report),
             content = {
                 { "h", update_get_loc(e_loc.upp_overview) },
@@ -1657,10 +1698,10 @@ function tab_manual_render(screen_w, screen_h, x, y, w, h, delta_time, is_active
                 update_get_loc(e_loc.manual_currency_report_overview_4),
 
                 { "h", update_get_loc(e_loc.upp_screens) },
-                { "s", update_get_loc(e_loc.currency_report), update_get_loc(e_loc.manual_currency_report_screens_1), tag="ship_log_screen_currency" },
+                { "s", update_get_loc(e_loc.currency_report), update_get_loc(e_loc.manual_currency_report_screens_1), tag = "ship_log_screen_currency" },
             }
         },
-        { 
+        {
             title = update_get_loc(e_loc.upp_cctv),
             content = {
                 { "h", update_get_loc(e_loc.upp_overview) },
@@ -1668,14 +1709,14 @@ function tab_manual_render(screen_w, screen_h, x, y, w, h, delta_time, is_active
                 update_get_loc(e_loc.manual_cctv_overview_2),
 
                 { "h", update_get_loc(e_loc.upp_screens) },
-                { "s", update_get_loc(e_loc.upp_cctv), update_get_loc(e_loc.manual_cctv_screens_1), tag="cctv_screen" },
+                { "s", update_get_loc(e_loc.upp_cctv), update_get_loc(e_loc.manual_cctv_screens_1), tag = "cctv_screen" },
             }
         },
-        { 
+        {
             title = update_get_loc(e_loc.upp_holomap),
             content = {
                 { "h", update_get_loc(e_loc.upp_overview) },
-                { update_get_loc(e_loc.manual_holomap_overview_1), tag="holomap_screen_map" },
+                { update_get_loc(e_loc.manual_holomap_overview_1), tag = "holomap_screen_map" },
                 update_get_loc(e_loc.manual_holomap_overview_2),
 
                 { "h", update_get_loc(e_loc.upp_notifications) },
@@ -1683,22 +1724,22 @@ function tab_manual_render(screen_w, screen_h, x, y, w, h, delta_time, is_active
                 update_get_loc(e_loc.manual_holomap_notifications_2),
 
                 { "h", update_get_loc(e_loc.upp_buttons) },
-                { "b", atlas_icons.help_button_switch, update_get_loc(e_loc.on_off), update_get_loc(e_loc.manual_holomap_buttons_on_off), tag="holomap_button_on_off" },
-                { "b", atlas_icons.help_button_blue, update_get_loc(e_loc.focus_carrier), update_get_loc(e_loc.manual_holomap_buttons_focus_carrier), tag="holomap_button_focus_carrier" },
-                { "b", atlas_icons.help_button_blue, update_get_loc(e_loc.focus_world), update_get_loc(e_loc.manual_holomap_buttons_focus_world), tag="holomap_button_focus_world" },
-                { "b", atlas_icons.help_button_grey, update_get_loc(e_loc.holomap_mode_cartographic), update_get_loc(e_loc.manual_holomap_buttons_cartographic), tag="holomap_button_map_mode_0" },
-                { "b", atlas_icons.help_button_grey, update_get_loc(e_loc.holomap_mode_wind), update_get_loc(e_loc.manual_holomap_buttons_wind), tag="holomap_button_map_mode_1" },
-                { "b", atlas_icons.help_button_grey, update_get_loc(e_loc.holomap_mode_precipitation), update_get_loc(e_loc.manual_holomap_buttons_precipitation), tag="holomap_button_map_mode_2" },
-                { "b", atlas_icons.help_button_grey, update_get_loc(e_loc.holomap_mode_fog), update_get_loc(e_loc.manual_holomap_buttons_fog), tag="holomap_button_map_mode_3" },
-                { "b", atlas_icons.help_button_grey, update_get_loc(e_loc.holomap_mode_ocean_current), update_get_loc(e_loc.manual_holomap_buttons_ocean_current), tag="holomap_button_map_mode_4" },
-                { "b", atlas_icons.help_button_grey, update_get_loc(e_loc.holomap_mode_ocean_depth), update_get_loc(e_loc.manual_holomap_buttons_ocean_depth), tag="holomap_button_map_mode_5" },
+                { "b", atlas_icons.help_button_switch, update_get_loc(e_loc.on_off), update_get_loc(e_loc.manual_holomap_buttons_on_off), tag = "holomap_button_on_off" },
+                { "b", atlas_icons.help_button_blue, update_get_loc(e_loc.focus_carrier), update_get_loc(e_loc.manual_holomap_buttons_focus_carrier), tag = "holomap_button_focus_carrier" },
+                { "b", atlas_icons.help_button_blue, update_get_loc(e_loc.focus_world), update_get_loc(e_loc.manual_holomap_buttons_focus_world), tag = "holomap_button_focus_world" },
+                { "b", atlas_icons.help_button_grey, update_get_loc(e_loc.holomap_mode_cartographic), update_get_loc(e_loc.manual_holomap_buttons_cartographic), tag = "holomap_button_map_mode_0" },
+                { "b", atlas_icons.help_button_grey, update_get_loc(e_loc.holomap_mode_wind), update_get_loc(e_loc.manual_holomap_buttons_wind), tag = "holomap_button_map_mode_1" },
+                { "b", atlas_icons.help_button_grey, update_get_loc(e_loc.holomap_mode_precipitation), update_get_loc(e_loc.manual_holomap_buttons_precipitation), tag = "holomap_button_map_mode_2" },
+                { "b", atlas_icons.help_button_grey, update_get_loc(e_loc.holomap_mode_fog), update_get_loc(e_loc.manual_holomap_buttons_fog), tag = "holomap_button_map_mode_3" },
+                { "b", atlas_icons.help_button_grey, update_get_loc(e_loc.holomap_mode_ocean_current), update_get_loc(e_loc.manual_holomap_buttons_ocean_current), tag = "holomap_button_map_mode_4" },
+                { "b", atlas_icons.help_button_grey, update_get_loc(e_loc.holomap_mode_ocean_depth), update_get_loc(e_loc.manual_holomap_buttons_ocean_depth), tag = "holomap_button_map_mode_5" },
             }
         },
-        { 
+        {
             title = update_get_loc(e_loc.upp_self_destruct),
             content = {
                 { "h", update_get_loc(e_loc.upp_overview) },
-                { update_get_loc(e_loc.manual_self_destruct_overview_1), tag="self_destruct" },
+                { update_get_loc(e_loc.manual_self_destruct_overview_1), tag = "self_destruct" },
                 "",
                 { "tc", color_status_bad, update_get_loc(e_loc.upp_warning) },
                 { "tc", color_status_bad, update_get_loc(e_loc.manual_self_destruct_overview_2) },
@@ -1738,20 +1779,20 @@ function tab_manual_render(screen_w, screen_h, x, y, w, h, delta_time, is_active
     local is_panel_0_highlight = is_active and g_tab_manual.selected_panel == 0
     local is_panel_1_highlight = is_active and g_tab_manual.selected_panel == 1
 
-    local win_main = ui:begin_window(update_get_loc(e_loc.upp_contents).."##main", lx, 5, lw, lh, atlas_icons.column_pending, is_panel_0_selected, 0, true, is_panel_0_highlight)
-        for k, v in pairs(manual_sections) do
-            local item_y = win_main.cy
-            ui:list_item_wrap(v.title)
+    local win_main = ui:begin_window(update_get_loc(e_loc.upp_contents) .. "##main", lx, 5, lw, lh, atlas_icons.column_pending, is_panel_0_selected, 0, true, is_panel_0_highlight)
+    for k, v in pairs(manual_sections) do
+        local item_y = win_main.cy
+        ui:list_item_wrap(v.title)
 
-            if g_tab_manual.highlighted_section.scroll_to_section > 0 then
-                if k == g_tab_manual.selected_page then
-                    ui:set_item_selected()
-                    ui:set_scroll(item_y)
-                end
-            elseif ui:is_item_selected() then
-                g_tab_manual.selected_page = k
+        if g_tab_manual.highlighted_section.scroll_to_section > 0 then
+            if k == g_tab_manual.selected_page then
+                ui:set_item_selected()
+                ui:set_scroll(item_y)
             end
+        elseif ui:is_item_selected() then
+            g_tab_manual.selected_page = k
         end
+    end
     ui:end_window()
 
     local section = manual_sections[g_tab_manual.selected_page]
@@ -1761,63 +1802,71 @@ function tab_manual_render(screen_w, screen_h, x, y, w, h, delta_time, is_active
         local highlighted_content_h = nil
 
         local content_win = ui:begin_window(section.title, rx, 5, rw, lh, nil, is_panel_1_selected, 0, true, is_panel_1_highlight)
-            local prev_item_type = ""
+        local prev_item_type = ""
 
-            for k, v in pairs(section.content) do
-                prev_item_type = type(v)
+        for k, v in pairs(section.content) do
+            prev_item_type = type(v)
 
-                local highlight_factor = 0
+            local highlight_factor = 0
 
-                if g_tab_manual.selected_page == g_tab_manual.highlighted_section.section_key and k == g_tab_manual.highlighted_section.content_key then
-                    highlighted_content_y = content_win.cy
-                    highlight_factor = math.min(g_tab_manual.highlighted_section.timer, 1000) / 1000
+            if g_tab_manual.selected_page == g_tab_manual.highlighted_section.section_key and k == g_tab_manual.highlighted_section.content_key then
+                highlighted_content_y = content_win.cy
+                highlight_factor = math.min(g_tab_manual.highlighted_section.timer, 1000) / 1000
+            end
+
+            if type(v) == "string" then
+                if prev_item_type == "string" then
+                    ui:spacer(5)
                 end
+                ui:text_basic(v)
+            elseif type(v) == "number" then
+                ui:image(v, 3)
+            elseif type(v) == "table" then
+                local element_type = v[1]
 
-                if type(v) == "string" then
-                    if prev_item_type == "string" then ui:spacer(5) end
-                    ui:text_basic(v)
-                elseif type(v) == "number" then
-                    ui:image(v, 3)
-                elseif type(v) == "table" then
-                    local element_type = v[1]
-
-                    if element_type == "h" then
-                        if k > 1 then ui:spacer(5) end
-                        ui:header(v[2])
-                    elseif element_type == "d" then
-                        ui:divider()
-                    elseif element_type == "b" then
-                        imgui_help_label_desc(ui, v[2], v[3], v[4], nil, highlight_factor)
-                    elseif element_type == "s" then
-                        imgui_help_label_desc(ui, atlas_icons.help_screen, v[2], v[3], nil, highlight_factor)
-                    elseif element_type == "i" then
-                        imgui_help_label(ui, v[2], v[3], nil, nil, nil, highlight_factor)
-                    elseif element_type == "ic" then
-                        imgui_help_label(ui, v[2], v[4], v[3], nil, nil, highlight_factor)
-                    elseif element_type == "ic16" then
-                        imgui_help_label(ui, v[2], v[4], v[3], 16, 16, highlight_factor)
-                    elseif element_type == "tc" then
-                        if prev_item_type == "string" then ui:spacer(5) end
-                        imgui_help_paragraph(ui, v[3], v[2], highlight_factor)
-                        prev_item_type = "string"
-                    else
-                        if prev_item_type == "string" then ui:spacer(5) end
-                        imgui_help_paragraph(ui, v[1], nil, highlight_factor)
-                        prev_item_type = "string"
+                if element_type == "h" then
+                    if k > 1 then
+                        ui:spacer(5)
                     end
-                end
-
-                if g_tab_manual.selected_page == g_tab_manual.highlighted_section.section_key and k == g_tab_manual.highlighted_section.content_key then
-                    highlighted_content_h = content_win.cy - highlighted_content_y
+                    ui:header(v[2])
+                elseif element_type == "d" then
+                    ui:divider()
+                elseif element_type == "b" then
+                    imgui_help_label_desc(ui, v[2], v[3], v[4], nil, highlight_factor)
+                elseif element_type == "s" then
+                    imgui_help_label_desc(ui, atlas_icons.help_screen, v[2], v[3], nil, highlight_factor)
+                elseif element_type == "i" then
+                    imgui_help_label(ui, v[2], v[3], nil, nil, nil, highlight_factor)
+                elseif element_type == "ic" then
+                    imgui_help_label(ui, v[2], v[4], v[3], nil, nil, highlight_factor)
+                elseif element_type == "ic16" then
+                    imgui_help_label(ui, v[2], v[4], v[3], 16, 16, highlight_factor)
+                elseif element_type == "tc" then
+                    if prev_item_type == "string" then
+                        ui:spacer(5)
+                    end
+                    imgui_help_paragraph(ui, v[3], v[2], highlight_factor)
+                    prev_item_type = "string"
+                else
+                    if prev_item_type == "string" then
+                        ui:spacer(5)
+                    end
+                    imgui_help_paragraph(ui, v[1], nil, highlight_factor)
+                    prev_item_type = "string"
                 end
             end
 
-            ui:divider(5, 0)
-            ui:divider(3, 10)
-
-            if highlighted_content_y ~= nil and g_tab_manual.highlighted_section.scroll_to_section > 0 then
-                ui:set_scroll(highlighted_content_y + highlighted_content_h / 2 + 10)
+            if g_tab_manual.selected_page == g_tab_manual.highlighted_section.section_key and k == g_tab_manual.highlighted_section.content_key then
+                highlighted_content_h = content_win.cy - highlighted_content_y
             end
+        end
+
+        ui:divider(5, 0)
+        ui:divider(3, 10)
+
+        if highlighted_content_y ~= nil and g_tab_manual.highlighted_section.scroll_to_section > 0 then
+            ui:set_scroll(highlighted_content_y + highlighted_content_h / 2 + 10)
+        end
         ui:end_window()
     else
         g_tab_manual.selected_page = 1
@@ -1826,10 +1875,10 @@ function tab_manual_render(screen_w, screen_h, x, y, w, h, delta_time, is_active
     g_tab_manual.highlighted_section.scroll_to_section = math.max(g_tab_manual.highlighted_section.scroll_to_section - 1, 0)
 
     if g_tab_manual.highlighted_section.section_tag_pending ~= "" then
-        g_tab_manual.highlighted_section.section_key, g_tab_manual.highlighted_section.content_key = find_section(g_tab_manual.highlighted_section.section_tag_pending)    
+        g_tab_manual.highlighted_section.section_key, g_tab_manual.highlighted_section.content_key = find_section(g_tab_manual.highlighted_section.section_tag_pending)
 
         if g_tab_manual.highlighted_section.section_key ~= nil and g_tab_manual.highlighted_section.content_key ~= nil then
-            g_tab_manual.highlighted_section.timer = 2000    
+            g_tab_manual.highlighted_section.timer = 2000
             g_tab_manual.selected_page = g_tab_manual.highlighted_section.section_key
             g_tab_manual.highlighted_section.scroll_to_section = 2
             g_tab_manual.selected_panel = 1
@@ -2006,14 +2055,14 @@ function imgui_help_label(ui, icon, label, col, rect_w, rect_h, highlight_factor
     local icon_w, icon_h = update_ui_get_image_size(icon)
     rect_w = rect_w or icon_w
     rect_h = rect_h or icon_h
-    
+
     local cx = x + 5
     local cy = y
     update_ui_image_power(cx + (rect_w - icon_w) / 2, y + (rect_h - icon_h) / 2, icon, col, 0, power)
     cx = cx + rect_w + 2
 
     local text_col = iff(highlight_factor > 0, color8_lerp(color_grey_dark, get_color_highlight(), highlight_factor), color_grey_dark)
-    
+
     local text_y = cy + rect_h / 2 - 5
     local text_h = update_ui_text(cx, text_y, label, w - cx - 5, 0, text_col, 0)
     cy = math.max(cy + rect_h, text_y + text_h) + 2
@@ -2051,10 +2100,68 @@ function get_peer_index_by_id(id)
             return i
         end
     end
-    
+
     return -1
 end
 
 function get_is_text_input_mode()
     return g_edit_text ~= nil
+end
+
+
+function tab_spectate_input_event(event, action)
+    if action == e_input_action.press then
+        g_tab_spectate.ui_container:input_event(event, action)
+        print(string.format("press %d", g_tab_spectate.btn_start_spectate))
+        g_spectator.enabled = 1
+    end
+    return false
+end
+
+function tab_spectate_input_scroll(dy)
+
+end
+
+function tab_spectate_input_pointer(is_hovered, x, y)
+    g_tab_spectate.ui_container:input_pointer(is_hovered, x, y)
+end
+
+function tab_spectate_render(screen_w, screen_h, x, y, w, h, delta_time, is_active)
+    local ui = g_tab_spectate.ui_container
+    update_set_screen_background_type(0)
+    update_ui_push_offset(x, y)
+    local is_active = is_tab_active and g_edit_text == nil
+    local is_mouse_active = g_is_mouse_mode and g_is_pointer_hovered and g_hovered_screen == g_screens.active_tab
+    local is_window_active = (is_active or is_mouse_active) -- and g_tab_multiplayer.selected_peer_id == 0
+
+    ui:begin_ui(delta_time)
+    ui:begin_window("##main", 5, 5, w - 10, h - 15, atlas_icons.column_pending, is_window_active, 0, true, is_active)
+    if ui:button(update_get_loc(e_loc.upp_confirm), true, 1) then
+        g_tab_spectate.btn_start_spectate = 1
+    end
+    ui:end_window()
+    ui:end_ui()
+
+end
+
+-- abstraction
+
+function begin()
+    begin_load()
+    pause_begin()
+    spectator_begin()
+end
+
+function update(screen_w, screen_h, ticks)
+    g_spectator.current_team = update_get_screen_team_id()
+    local ok, err = pcall(function()
+        pause_update(screen_w, screen_h, ticks)
+    end)
+    if not ok then
+        print(string.format("error: %s", err))
+    end
+end
+
+function input_event(event, action)
+    pause_input_event(event, action)
 end
