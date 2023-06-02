@@ -3,8 +3,15 @@
 	<bodies/>
 	<constraints/>
 	<meshes>
-		<mesh file="meshes/character/tablet.mesh" name="mesh" lod="0" body="0" is_paint_dirt="false">
-			<transform m00="-1.00000000e+00" m01="0.00000000e+00" m02="8.74227766e-08" m10="0.00000000e+00" m11="1.00000000e+00" m12="0.00000000e+00" m20="-8.74227766e-08" m21="0.00000000e+00" m22="-1.00000000e+00" tx="0.00000000e+00" ty="-4.99999989e-03" tz="0.00000000e+00"/>
+		<mesh file="meshes/vehicles/barge_broken/barge_broken.mesh"
+				xfile="meshes/character/tablet.mesh" name="mesh" lod="0" body="0" is_paint_dirt="false">
+			<transform m00="-1.00000000e+00" m01="0.00000000e+00" m02="8.74227766e-08"
+					   m10="0.00000000e+00" m11="1.00000000e+00" m12="0.00000000e+00"
+					   m20="-8.74227766e-08" m21="0.00000000e+00" m22="-1.00000000e+00"
+					   tx="0.00000000e+00"
+					   xxty="-4.99999989e-03"
+					   ty="-3"
+					   tz="0.00000000e+00"/>
 		</mesh>
 	</meshes>
 	<wheels/>
@@ -22,8 +29,11 @@
 	<indicators/>
 	<dials/>
 	<screens>
-		<screen name="screen" display_name="" script_file_name="" body_index="4294967295" seat_index="4294967295" type="4">
-			<transform m00="1.00000000e+00" m01="0.00000000e+00" m02="0.00000000e+00" m10="0.00000000e+00" m11="1.00000000e+00" m12="0.00000000e+00" m20="0.00000000e+00" m21="0.00000000e+00" m22="1.00000000e+00" tx="0.00000000e+00" ty="0.00000000e+00" tz="0.00000000e+00"/>
+		<screen name="screen" display_name="" script_file_name="pause_menu.lua" body_index="4294967295" seat_index="4294967295" type="3">
+			<transform m00="1.00000000e+00" m01="0.00000000e+00" m02="0.00000000e+00" m10="0.00000000e+00" m11="1.00000000e+00" m12="0.00000000e+00" m20="0.00000000e+00" m21="0.00000000e+00" m22="1.00000000e+00"
+					   tx="0.00000000e+00"
+					   ty="-0.07"
+					   tz="0.00000000e+00"/>
 		</screen>
 	</screens>
 	<doors/>

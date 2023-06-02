@@ -978,7 +978,8 @@ function begin()
     g_ui = lib_imgui:create_ui()
 end
 
-function update(screen_w, screen_h, ticks)
+function spectator_update(screen_w, screen_h, ticks)
+
     g_screen_w = screen_w
     g_screen_h = screen_h
     g_is_mouse_mode = g_is_pointer_hovered and update_get_active_input_type() == e_active_input.keyboard
@@ -1153,7 +1154,7 @@ function update(screen_w, screen_h, ticks)
                             local vehicle_team = vehicle:get_team()
                             local vehicle_attached_parent_id = vehicle:get_attached_parent_id()
 
-                            if vehicle_attached_parent_id == 0 and is_spectator() or (vehicle:get_is_visible() and vehicle:get_is_observation_revealed()) then
+                            if vehicle_attached_parent_id == 0 and vehicle:get_is_visible() and vehicle:get_is_observation_revealed() then
                                 local vehicle_pos_xz = vehicle:get_position_xz()
                                 local screen_pos_x, screen_pos_y = get_screen_from_world(vehicle_pos_xz:x(), vehicle_pos_xz:y(), g_camera_pos_x, g_camera_pos_y, g_camera_size, screen_w, screen_h)
                                 local vehicle_distance_to_cursor = math.abs(screen_pos_x - g_cursor_pos_x) + math.abs(screen_pos_y - g_cursor_pos_y)
@@ -1418,7 +1419,7 @@ function update(screen_w, screen_h, ticks)
                         end
                     end
 
-                    if is_spectator() or weapon_radius_vehicle:get_team() == update_get_screen_team_id() then
+                    if weapon_radius_vehicle:get_team() == update_get_screen_team_id() then
                         if def == e_game_object_type.chassis_sea_ship_light or def == e_game_object_type.chassis_sea_ship_heavy then
                             local team_carrier = screen_vehicle
                             local vehicle_pos_xz = team_carrier:get_position_xz()
@@ -1465,7 +1466,7 @@ function update(screen_w, screen_h, ticks)
                             local vehicle = update_get_map_vehicle_by_id(vehicle_id)
 
                             if vehicle:get() then
-                                if is_spectator() or (vehicle:get_is_visible() and vehicle:get_is_observation_revealed()) then
+                                if vehicle:get_is_visible() and vehicle:get_is_observation_revealed() then
                                     local position_xz = vehicle:get_position_xz()
                                     local length = 0.04 * g_camera_size
 
@@ -1496,8 +1497,8 @@ function update(screen_w, screen_h, ticks)
                     local is_render_vehicle_icon = vehicle_attached_parent_id == 0
 
                     if vehicle_definition_index ~= e_game_object_type.chassis_spaceship and vehicle_definition_index ~= e_game_object_type.drydock then
-                        local is_visible = is_spectator() or vehicle:get_is_visible()
-                        local is_revealed = is_spectator() or vehicle:get_is_observation_revealed()
+                        local is_visible = vehicle:get_is_visible()
+                        local is_revealed = vehicle:get_is_observation_revealed()
 
                         if is_visible and is_revealed then
                             local vehicle_pos_xz = vehicle:get_position_xz()
@@ -1812,7 +1813,7 @@ function update(screen_w, screen_h, ticks)
                                     cy = cy + 2
                                 end
 
-                                if is_spectator() or (vehicle_team == update_get_screen_team_id() and vehicle_definition_index ~= e_game_object_type.chassis_land_robot_dog) then
+                                if vehicle_team == update_get_screen_team_id() and vehicle_definition_index ~= e_game_object_type.chassis_land_robot_dog then
                                     cx = screen_pos_x - 4
 
                                     local is_visible_by_enemy = vehicle:get_is_visible_by_enemy()
@@ -2374,7 +2375,7 @@ function input_zoom_camera(factor, screen_w, screen_h, zoom_x, zoom_y)
     end
 end
 
-function input_event(event, action)
+function spectator_input_event(event, action)
     if event == e_input.pointer_1 then
         g_is_pointer_pressed = action == e_input_action.press
     end
@@ -2746,7 +2747,7 @@ function render_vehicle_tooltip(w, h, vehicle)
     local team = vehicle:get_team()
     local color_inactive = color8(8, 8, 8, 255)
 
-    if is_spectator() or vehicle:get_is_observation_type_revealed() then
+    if vehicle:get_is_observation_type_revealed() then
         update_ui_rectangle(cx + 0, cy, 1, bar_h, color8(16, 16, 16, 255))
         update_ui_rectangle(cx + 0, cy + bar_h - repair_bar, 1, repair_bar, color8(47, 116, 255, 255))
         update_ui_rectangle(cx + 2, cy, 1, bar_h, color8(16, 16, 16, 255))
@@ -2761,7 +2762,7 @@ function render_vehicle_tooltip(w, h, vehicle)
 
     cx = cx + 6
 
-    if is_spectator() or vehicle:get_is_observation_type_revealed() then
+    if vehicle:get_is_observation_type_revealed() then
         update_ui_image(cx, 2, vehicle_definition_region, color8(255, 255, 255, 255), 0)
         cx = cx + 18
 
@@ -2777,7 +2778,7 @@ function render_vehicle_tooltip(w, h, vehicle)
     end
 
     if vehicle_definition_index ~= e_game_object_type.chassis_carrier then
-        if is_spectator() or vehicle:get_is_observation_weapon_revealed() then
+        if vehicle:get_is_observation_weapon_revealed() then
             -- render primary attachment icon
 
             for i = 0, vehicle:get_attachment_count() - 1 do
@@ -2800,14 +2801,12 @@ function render_vehicle_tooltip(w, h, vehicle)
         end
     end
 
-    if not is_spectator() then
-        if vehicle:get_is_observation_fully_revealed() == false then
-            local data_factor = vehicle:get_observation_factor()
-            update_ui_text(0, 6, string.format("%.0f%%", data_factor * 100), w - 2, 2, color_inactive, 0)
-        end
+    if vehicle:get_is_observation_fully_revealed() == false then
+        local data_factor = vehicle:get_observation_factor()
+        update_ui_text(0, 6, string.format("%.0f%%", data_factor * 100), w - 2, 2, color_inactive, 0)
     end
 
-    if is_spectator() or team == update_get_screen_team_id() then
+    if team == update_get_screen_team_id() then
         cx = w - 12
 
         if get_is_vehicle_enterable(vehicle) then
@@ -2985,7 +2984,7 @@ function get_is_render_fuel_indicator(vehicle)
 end
 
 function get_vehicle_team_color(team)
-    if is_spectator() or g_is_vehicle_team_colors then
+    if g_is_vehicle_team_colors then
         return update_get_team_color(team)
     elseif team == update_get_screen_team_id() then
         return color_friendly
@@ -3081,7 +3080,8 @@ function get_is_vehicle_waypoint_available(vehicle)
     if (vehicle:get_dock_state() == e_vehicle_dock_state.docking and vehicle:get_attached_parent_id() ~= 0) or vehicle:get_dock_state() == e_vehicle_dock_state.docking_taxi then
         return false
     end
-    if is_spectator() and g_spectator.current_team ~= vehicle:get_team() then
+
+    if g_spectator.current_team ~= vehicle:get_team() then
         return false
     end
     return true
