@@ -1,3 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<data name="Spectator Mode+UI+AWACS" author="Bredroll" description="Team 1 gets to see everything - Merged with UI Enhancer by QuantX and Albatross AWACS by Thumblegudget">
+<data name="Spectator Mode+UI+AWACS" author="Bredroll" description="
+Team 1 gets to see everything - Merged with UI Enhancer by QuantX and Albatross AWACS by Thumblegudget
+
+This is more like 'creative' mode, the Team one crew can control and issue waypoints to any unit in the game
+including AI controlled units.
+">
 </data>

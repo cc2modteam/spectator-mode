@@ -1572,7 +1572,7 @@ function update(screen_w, screen_h, ticks)
                                 show_waypoints = g_is_carrier_waypoint
                             end
                         
-                            if vehicle_team == update_get_screen_team_id() and show_waypoints then
+                            if is_spectator() or (vehicle_team == update_get_screen_team_id()) and show_waypoints then
                                 local waypoint_color = g_color_waypoint
 
                                 if g_highlighted.vehicle_id == vehicle:get_id() and g_highlighted.waypoint_id == 0 then
@@ -2533,13 +2533,13 @@ function input_event(event, action)
                     elseif g_highlighted.vehicle_id > 0 and g_highlighted.waypoint_id == 0 then
                         local highlighted_vehicle = update_get_map_vehicle_by_id(g_highlighted.vehicle_id)
 
-                        if highlighted_vehicle:get() and highlighted_vehicle:get_team() == update_get_screen_team_id() then
+                        if highlighted_vehicle:get() and (highlighted_vehicle:get_team() == update_get_screen_team_id() or is_spectator()) then
                             g_drag:set_vehicle(g_highlighted.vehicle_id)
                         end
                     elseif g_highlighted.vehicle_id > 0 and g_highlighted.waypoint_id > 0 then
                         local highlighted_vehicle = update_get_map_vehicle_by_id(g_highlighted.vehicle_id)
 
-                        if highlighted_vehicle:get() and highlighted_vehicle:get_team() == update_get_screen_team_id() then
+                        if highlighted_vehicle:get() and (highlighted_vehicle:get_team() == update_get_screen_team_id()) or is_spectator() then
                             g_drag:set_vehicle_waypoint(g_highlighted.vehicle_id, g_highlighted.waypoint_id)
                         end
                     elseif g_highlighted.command_center_id > 0 then
@@ -2635,7 +2635,7 @@ function input_event(event, action)
                                         local highlighted_vehicle_team = highlighted_vehicle:get_team()
                                         local highlighted_vehicle_definition = highlighted_vehicle:get_definition_index()
 
-                                        if highlighted_vehicle_team == update_get_screen_team_id() then
+                                        if highlighted_vehicle_team == update_get_screen_team_id() or is_spectator() then
                                             if g_drag.waypoint_id > 0 and vehicle_definition_index == e_game_object_type.chassis_air_rotor_heavy and get_is_vehicle_airliftable(highlighted_vehicle_definition) then
                                                 -- toggle an "attack" target to perform airlift operation on friendly vehicle
 
@@ -3268,8 +3268,6 @@ function get_is_vehicle_waypoint_available(vehicle)
     if (vehicle:get_dock_state() == e_vehicle_dock_state.docking and vehicle:get_attached_parent_id() ~= 0) or vehicle:get_dock_state() == e_vehicle_dock_state.docking_taxi then
         return false
     end
-    if is_spectator() and g_spectator.current_team ~= vehicle:get_team() then
-        return false
-    end
+
     return true
 end

@@ -646,18 +646,16 @@ function tab_map_render(screen_w, screen_h, x, y, w, h, delta_time, is_active)
         g_tab_map.is_overlay = true
         update_ui_rectangle(0, 0, screen_w, screen_h, color8(0, 0, 0, 200))
 
-        ui:begin_window_dialog(
-                "VIEW".. "##confirm_travel",
-                screen_w / 2, screen_h / 2, w - 100, h - 100, atlas_icons.column_distance, is_active)
+        ui:begin_window_dialog(update_get_loc(e_loc.upp_travel_to_carrier).."##confirm_travel", screen_w / 2, screen_h / 2, w - 100, h - 100, atlas_icons.column_distance, is_active)
 
         if ui:button(update_get_loc(e_loc.upp_cancel), true, 1) then
             g_tab_map.selected_carrier_id = 0
         end
 
         if ui:button(update_get_loc(e_loc.upp_confirm), true, 1) then
-            print(string.format("%d", g_tab_map.selected_carrier_id))
-            update_set_screen_vehicle_control_id(g_tab_map.selected_carrier_id)
+            update_ui_event("character_return_to_bridge", g_tab_map.selected_carrier_id)
             g_tab_map.selected_carrier_id = 0
+            update_exit_pause_menu()
         end
 
         ui:end_window()
